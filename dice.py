@@ -1,22 +1,33 @@
 import asyncio
 import logging
 import re
+import uvloop
 
 from pyrogram import Client, filters, idle
 from pyrogram.errors import FloodWait
 from pyrogram.types import Message
 
+# Установка библиотек (если еще не установлены)
+# pip install uvloop Pyrogram[fast]
+
 # Замените значения на свои
-API_ID = 26275523
-API_HASH = '0c05510640d083029f687cee75f252e3'
+API_ID = 26275523  # Ваш API_ID
+API_HASH = '0c05510640d083029f687cee75f252e3'  # Ваш API_HASH
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Используйте session_name для имени сессии (например, "my_account")
-app = Client("my_account", api_id=API_ID, api_hash=API_HASH)
+# Используем uvloop (если доступно)
+try:
+    import uvloop
+    asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+except ImportError:
+    logger.warning("uvloop не установлен. Используется стандартный цикл событий asyncio.")
 
-owner_id = 6065764233 # Ваш user ID
+# Указываем workers для ускорения сетевых операций
+app = Client("my_account", api_id=API_ID, api_hash=API_HASH, workers=4)
+
+owner_id = 6065764233  # Ваш user ID
 
 
 @app.on_message(filters.command("dice") & filters.user(owner_id))
@@ -61,6 +72,7 @@ async def dicecmd(client: Client, message: Message):
         await asyncio.gather(*tasks)
 
 
+
 async def roll_dice_until(client: Client, chat_id: int, target_value: int):
     while True:
         try:
@@ -69,12 +81,12 @@ async def roll_dice_until(client: Client, chat_id: int, target_value: int):
                 return
             try:
                 await msg.delete()
-            except: pass
+            except:
+                pass  # Иногда не удается удалить сообщение (например, если оно уже удалено)
         except FloodWait as e:
             await asyncio.sleep(e.x + 1)
         except Exception as e:
             logger.error(f"Ошибка: {e}")
-
 
 
 async def main():
